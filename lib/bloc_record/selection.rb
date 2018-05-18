@@ -1,4 +1,5 @@
 require 'sqlite3'
+require 'pg'
 
 module Selection
 
@@ -55,7 +56,6 @@ module Selection
     end
 
     def take(num=1)
-      p "FUCKOFF."
       if num.is_a? Integer
         if num > 1
             rows = connection.execute <<-SQL
@@ -74,7 +74,7 @@ module Selection
     end
 
     def first
-        row = connection.execute <<-SQL
+        row = connection.get_first_row <<-SQL
           SELECT #{columns.join ","} FROM #{table}
           ORDER BY id ASC
           LIMIT 1;

@@ -53,6 +53,3 @@ module BlocRecord
         end
     end
 end
-
-test = BlocRecord::Collection.new
-p test.take

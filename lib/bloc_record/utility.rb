@@ -35,9 +35,5 @@ module BlocRecord
                 dirty_obj.instance_variable_set(instance_variable, persisted.obj.instance_variable_get(instance_variable))
             end
         end
-
-
-
-
     end
 end
