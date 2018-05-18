@@ -55,6 +55,7 @@ module Selection
     end
 
     def take(num=1)
+      p "FUCKOFF."
       if num.is_a? Integer
         if num > 1
             rows = connection.execute <<-SQL
@@ -221,15 +222,11 @@ module Selection
     end
     
     def rows_to_array(rows)
-        rows.map { |row| new(Hash[columns.zip(row)]) }
+        collection = BlocRecord::Collection.new
+        rows.each { |row| collection << new(Hash[columns.zip(row)]) }
+        collection
     end
 end
 
 
 
-# SELECT department.department_name, avg(compensation.vacation_days) AS average_vacation_days
-# FROM department
-# JOIN professor ON department.id = professor.department_id 
-# JOIN compensation ON professor.id = compensation.professor_id                
-# GROUP BY department.department_name
-# ORDER BY average_vacation_days;

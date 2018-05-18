@@ -11,7 +11,6 @@ module Persistence
     end
 
     def save!
-
         unless self.id 
             self.id = self.class.create(BlocRecord::Utility.instance_variables_to_hash(self)).id
             BlocRecord::Utility.reload_obj(self)
@@ -29,6 +28,17 @@ module Persistence
         true
     end
 
+    def update_attribute(attribute, value)
+        self.class.update(self.id, { attribute => value })
+    end
+
+    def update_attributes(updates)
+        self.class.update(self.id, updates)
+    end
+
+    def destroy
+        self.class.destroy(self.id)
+    end
 
     
     module ClassMethods
@@ -45,6 +55,89 @@ module Persistence
             data = Hash[attributes.zip attrs.values]
             data["id"] = connection.execute("SELECT last_insert_rowid();")[0][0]
             new(data)
+        end
+
+        def update_all(updates)
+            update(nil, updates)
+        end
+
+        def update(ids = {}, updates)
+            if ids.class != Integer and ids.class != Array
+                keys = updates.keys
+                values = updates.values
+            
+                count = 0
+                while count < keys.length
+                update(keys[count], values[count])
+                count += 1
+                end
+              
+            else 
+                updates = BlocRecord::Utility.convert_keys(updates)
+                updates.delete "id"
+
+                updates_array = updates.map { |key, value| "#{key}=#{BlocRecord::Utility.sql_strings(value)}" }
+
+                if ids.class == Integer
+                    where_clause = " WHERE id = #{ids};"
+                elsif ids.class == Array
+                    where_clause = ids.empty? ? ";" : " WHERE id IN (#{ids.join(",")});"
+                else
+                    where_clause = ";"
+                end
+
+                connection.execute <<-SQL
+                UPDATE #{table}
+                SET #{updates_array * ","}#{where_clause}
+                SQL
+
+                true
+            end
+        end
+
+        def method_missing(method, *args, &block)
+            if method.to_s =~ /update_(.*)/
+                update_attribute($1, *args[0])
+            else
+                super
+            end
+        end
+
+        def destroy(*id)
+            if id.length > 1
+                where_clause = "WHERE id IN (#{id.join (",")});"
+            else
+                where_clause = "WHERE id = #{id.first};"
+            end
+
+            connection.execute <<-SQL
+              DELETE FROM #{table} #{where_clause}
+            SQL
+
+            true
+        end
+
+        def destroy_all(conditions_args=nil)
+            if conditions_args.class == Hash
+                conditions_args = BlocRecord::Utility.convert_keys(conditions_args)
+                conditions = conditions_args.map {|key, value| "#{key}=#{BlocRecord::Utility.sql_strings(value)}"}.join(" and ")
+            elsif conditions_args.class == String
+                conditions = conditions_args
+            elsif conditions_args.class == Array
+                conditions = conditions_args.join(" AND ")
+
+
+                connection.execute <<-SQL
+                    DELETE FROM #{table}
+                    WHERE #{conditions}
+                SQL
+            else
+                connection.execute <<-SQL
+                  DELETE FROM #{table}
+                SQL
+            end
+
+            true
         end
     end
 end
